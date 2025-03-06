@@ -3,15 +3,56 @@ from pathlib import Path
 import logging
 
 # Logging configuration
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s]: %(message)s:')
+logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(levelname)s]: %(message)s')
+
 
 project_name = "content_creation"
 
-# List of files and folders to create
-list_of_files = [
+# List of files and folders to create based on user input
+list_of_files = []
+user_files = [
     ".github/workflows/.gitkeep",
-    
+    f"src/{project_name}/main.py",  
+    f"src/{project_name}/components/__init__.py",
+    f"src/{project_name}/utils/__init__.py",
+    f"src/{project_name}/config/__init__.py",
+    f"src/{project_name}/config/configuration.py",
+    f"src/{project_name}/pipeline/__init__.py",
+    f"src/{project_name}/entity/__init__.py",
+    f"src/{project_name}/constants/__init__.py",
+    f"src/{project_name}/routers/__init__.py",
+    f"src/{project_name}/routers/ads.py",  
+    f"src/{project_name}/routers/social_content.py", 
+    f"src/{project_name}/routers/video.py",  
+    "config/config.yaml",
+    "params.yaml",
+    "requirements.txt",
+    "setup.py",
+    "research/trials.ipynb",
+    "templates/index.html",
+    "templates/ad-generation.html",
+    "templates/social-content.html",
+    "templates/video-generation.html",
+    "templates/results.html",
+    "static/css/style.css",
+    "static/js/script.js",
+    "static/images/.gitkeep",
+
+    "static/images/.gitkeep",
+    "static/images/.gitkeep",
+    "static/images/.gitkeep",
+    "static/images/.gitkeep",
+    "static/images/.gitkeep",
+]
+
+# Prompt user for additional files to create
+additional_files = input("Enter additional files to create, separated by commas: ")
+if additional_files:
+    user_files.extend([file.strip() for file in additional_files.split(',')])
+
+list_of_files.extend(user_files)".github/workflows/.gitkeep",
     f"src/{project_name}/__init__.py",
+
     f"src/{project_name}/main.py",  
 
     f"src/{project_name}/components/__init__.py",
@@ -42,6 +83,7 @@ list_of_files = [
     "static/css/style.css",
     "static/js/script.js",
     "static/images/.gitkeep",
+
 ]
 
 # Create directories and files

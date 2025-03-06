@@ -1,5 +1,6 @@
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
@@ -15,17 +16,26 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-app.include_router(ads.router, prefix="/api/ads", tags=["Ad Generation"])
-app.include_router(social_content.router, prefix="/api/social_content", tags=["Social Media Content"])
-app.include_router(video.router, prefix="/api/video", tags=["AI Video Generation"])
+# Include routers
+app.include_router(ads.router, prefix="/api", tags=["Ad Generation"])
+app.include_router(social_content.router, prefix="/api", tags=["Social Media Content"])
+app.include_router(video.router, prefix="/api", tags=["AI Video Generation"])
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unexpected error: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred."},
+    )
 
 @app.get("/")
-async def home(request: Request):
-    """
-    Home route that renders the index page.
-    """
-    try:
-        return templates.TemplateResponse("index.html", {"request": request, "title": "AI Content Creation"})
-    except Exception as e:
-        logger.error(f"Error rendering index page: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+def home():
+    return {"message": "Welcome to the AI Content Creation API!"}
