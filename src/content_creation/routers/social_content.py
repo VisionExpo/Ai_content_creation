@@ -1,15 +1,19 @@
 import os
 import logging
+import base64
 import google.generativeai as genai
+import requests
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +30,10 @@ generation_config = {
     "max_output_tokens": 300,
 }
 
+# Create directory for storing images if it doesn't exist
+STATIC_DIR = Path("static/images/generated")
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
 # Create FastAPI router
 router = APIRouter()
 
@@ -41,6 +49,8 @@ class SocialContentRequest(BaseModel):
     tone: Optional[str] = "engaging"
     include_hashtags: Optional[bool] = True
     include_emojis: Optional[bool] = True
+    generate_image: Optional[bool] = False
+    image_prompt: Optional[str] = None
 
 def generate_fallback_content(request: SocialContentRequest) -> str:
     """Generate content without using external APIs as a fallback mechanism."""
@@ -311,13 +321,100 @@ def generate_social_content(request: SocialContentRequest):
         logger.error(f"Error generating social content: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating social content.")
 
+def generate_image(prompt: str) -> str:
+    """Generate an image using Stability AI API and return the path to the saved image."""
+    try:
+        if not STABILITY_API_KEY:
+            logger.warning("Stability API key is missing. Cannot generate image.")
+            return None
+
+        # Prepare the API request
+        url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+
+        headers = {
+            "Authorization": f"Bearer {STABILITY_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        body = {
+            "text_prompts": [
+                {
+                    "text": prompt,
+                    "weight": 1.0
+                }
+            ],
+            "cfg_scale": 7,
+            "height": 1024,
+            "width": 1024,
+            "samples": 1,
+            "steps": 30
+        }
+
+        # Make the API request
+        response = requests.post(url, headers=headers, json=body)
+
+        if response.status_code != 200:
+            logger.error(f"Error generating image: {response.text}")
+            return None
+
+        data = response.json()
+
+        # Save the image
+        if "artifacts" in data and len(data["artifacts"]) > 0:
+            artifact = data["artifacts"][0]
+            image_data = base64.b64decode(artifact["base64"])
+
+            # Generate a unique filename
+            import time
+            import hashlib
+            timestamp = int(time.time())
+            filename = f"image_{timestamp}_{hashlib.md5(prompt.encode()).hexdigest()[:8]}.png"
+            image_path = STATIC_DIR / filename
+
+            # Save the image
+            with open(image_path, "wb") as f:
+                f.write(image_data)
+
+            # Return the relative path to the image
+            return f"/static/images/generated/{filename}"
+        else:
+            logger.error("No image data in response")
+            return None
+
+    except Exception as e:
+        logger.error(f"Error generating image: {str(e)}")
+        return None
+
 # Define the API endpoints
 @router.post("/social_content")
 async def create_social_content(request: SocialContentRequest):
     """Endpoint to generate social media content using AI."""
     try:
         content = generate_social_content(request)
-        return {"message": content, "platform": request.platform}
+        response_data = {"message": content, "platform": request.platform}
+
+        # Generate image if requested
+        if request.generate_image:
+            # Create image prompt if not provided
+            image_prompt = request.image_prompt
+            if not image_prompt:
+                # Use product details to create a default image prompt
+                product_desc = f"{request.product_name}" if request.product_name else request.content_title
+                category_desc = f" {request.product_category}" if request.product_category else ""
+                features_desc = ""
+                if request.key_features and len(request.key_features) > 0:
+                    features_desc = f" with {', '.join(request.key_features[:2])}"
+
+                image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+
+            # Generate the image
+            image_path = generate_image(image_prompt)
+            if image_path:
+                response_data["image_url"] = image_path
+                response_data["image_prompt"] = image_prompt
+
+        return response_data
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 
@@ -333,7 +430,9 @@ async def get_social_content(
     target_audience: Optional[str] = None,
     tone: Optional[str] = "engaging",
     include_hashtags: Optional[bool] = True,
-    include_emojis: Optional[bool] = True
+    include_emojis: Optional[bool] = True,
+    generate_image: Optional[bool] = False,
+    image_prompt: Optional[str] = None
 ):
     """Endpoint to generate social media content using AI (GET method)."""
     try:
@@ -353,10 +452,33 @@ async def get_social_content(
             target_audience=target_audience,
             tone=tone,
             include_hashtags=include_hashtags,
-            include_emojis=include_emojis
+            include_emojis=include_emojis,
+            generate_image=generate_image,
+            image_prompt=image_prompt
         )
 
         content = generate_social_content(request)
-        return {"message": content, "platform": platform}
+        response_data = {"message": content, "platform": platform}
+
+        # Generate image if requested
+        if generate_image:
+            # Create image prompt if not provided
+            if not image_prompt:
+                # Use product details to create a default image prompt
+                product_desc = f"{product_name}" if product_name else content_title
+                category_desc = f" {product_category}" if product_category else ""
+                features_desc = ""
+                if key_features_list and len(key_features_list) > 0:
+                    features_desc = f" with {', '.join(key_features_list[:2])}"
+
+                image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+
+            # Generate the image
+            image_path = generate_image(image_prompt)
+            if image_path:
+                response_data["image_url"] = image_path
+                response_data["image_prompt"] = image_prompt
+
+        return response_data
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
