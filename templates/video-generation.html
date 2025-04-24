@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Generation - AI Content Creation</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-blue-700 text-white shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="/" class="text-2xl font-bold">AI Content Creation</a>
+                <div class="flex space-x-6">
+                    <a href="/" class="hover:text-blue-200 transition-colors">Home</a>
+                    <a href="/ad-generation" class="hover:text-blue-200 transition-colors">Ad Generation</a>
+                    <a href="/social-content" class="hover:text-blue-200 transition-colors">Social Content</a>
+                    <a href="/video-generation" class="hover:text-blue-200 transition-colors">Video Generation</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-6">AI Video Generation</h1>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+                <div class="flex items-start">
+                    <div class="text-yellow-500 mr-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-yellow-800">Coming Soon</h3>
+                        <p class="text-yellow-700 text-sm">
+                            Full video generation with animations and voiceovers will be available soon.
+                            Currently, this demo will generate a video concept and script.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Create Your Video</h2>
+
+                        <form id="videoForm" class="space-y-4">
+                            <div>
+                                <label for="video_title" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Video Title/Topic
+                                </label>
+                                <input
+                                    type="text"
+                                    id="video_title"
+                                    name="video_title"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                    placeholder="e.g., Product Demo, Company Introduction, etc."
+                                />
+                            </div>
+
+                            <div>
+                                <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Duration (seconds)
+                                </label>
+                                <input
+                                    type="range"
+                                    id="duration"
+                                    name="duration"
+                                    min="15"
+                                    max="120"
+                                    step="15"
+                                    value="30"
+                                    class="w-full"
+                                />
+                                <div class="flex justify-between text-xs text-gray-500">
+                                    <span>15s</span>
+                                    <span id="duration-value">30s</span>
+                                    <span>120s</span>
+                                </div>
+                            </div>
+
+                            <div id="error-message" class="text-red-600 text-sm hidden"></div>
+
+                            <button
+                                type="submit"
+                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                id="generateBtn"
+                            >
+                                Generate Video Concept
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="mt-6 bg-white rounded-lg shadow-md p-6 bg-gray-50">
+                        <h3 class="text-lg font-semibold mb-3">Video Creation Process</h3>
+                        <ol class="list-decimal pl-5 space-y-2 text-gray-700">
+                            <li>Generate a video concept and script</li>
+                            <li>Create storyboards and visual elements</li>
+                            <li>Add animations and transitions</li>
+                            <li>Generate AI voiceover narration</li>
+                            <li>Combine all elements into a final video</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6 h-full">
+                        <h2 class="text-xl font-semibold mb-4">Generated Video Concept</h2>
+
+                        <div id="loading" class="flex items-center justify-center h-64 hidden">
+                            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                        </div>
+
+                        <div id="result" class="hidden">
+                            <div class="bg-gray-50 p-4 rounded-md border border-gray-200 min-h-[300px]">
+                                <div class="mb-3">
+                                    <span id="duration-badge" class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                                        30 seconds
+                                    </span>
+                                </div>
+
+                                <p id="video-concept" class="whitespace-pre-line"></p>
+
+                                <div class="mt-6 flex justify-end">
+                                    <button
+                                        id="copyBtn"
+                                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-sm flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                        </svg>
+                                        Copy to Clipboard
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <p>Fill out the form and click "Generate Video Concept" to create your video idea</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold">AI Content Creation</h3>
+                    <p class="text-gray-400 mt-1">Create amazing content with AI</p>
+                </div>
+
+                <div class="mt-6 md:mt-0">
+                    <p>&copy; 2023 AI Content Creation. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoForm = document.getElementById('videoForm');
+            const generateBtn = document.getElementById('generateBtn');
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('result');
+            const emptyStateEl = document.getElementById('empty-state');
+            const videoConceptEl = document.getElementById('video-concept');
+            const durationBadgeEl = document.getElementById('duration-badge');
+            const errorMessageEl = document.getElementById('error-message');
+            const copyBtn = document.getElementById('copyBtn');
+            const durationInput = document.getElementById('duration');
+            const durationValueEl = document.getElementById('duration-value');
+
+            // Update duration value display when slider changes
+            durationInput.addEventListener('input', function() {
+                durationValueEl.textContent = `${durationInput.value}s`;
+            });
+
+            videoForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Show loading state
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating...';
+                loadingEl.classList.remove('hidden');
+                resultEl.classList.add('hidden');
+                emptyStateEl.classList.add('hidden');
+                errorMessageEl.classList.add('hidden');
+
+                try {
+                    // Get form data
+                    const formData = new FormData(videoForm);
+                    const video_title = formData.get('video_title');
+                    const duration = formData.get('duration');
+
+                    // Send API request
+                    const response = await fetch(`/api/videos?video_title=${encodeURIComponent(video_title)}&duration=${encodeURIComponent(duration)}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to generate video concept');
+                    }
+
+                    const data = await response.json();
+
+                    // Display result
+                    videoConceptEl.textContent = data.message;
+                    durationBadgeEl.textContent = `${duration} seconds`;
+                    loadingEl.classList.add('hidden');
+                    resultEl.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    errorMessageEl.textContent = 'Failed to generate video concept. Please try again.';
+                    errorMessageEl.classList.remove('hidden');
+                    loadingEl.classList.add('hidden');
+                    emptyStateEl.classList.remove('hidden');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Video Concept';
+                }
+            });
+
+            // Copy to clipboard functionality
+            copyBtn.addEventListener('click', function() {
+                const textToCopy = videoConceptEl.textContent;
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
