@@ -345,16 +345,14 @@ def generate_ai_image(prompt: str) -> str:
         enhanced_prompt = f"Professional product photo of {clean_prompt}, white background, studio lighting, high quality, detailed product photography"
         logger.info(f"Using enhanced prompt: {enhanced_prompt}")
 
-        # Prepare the API request - try the recommended endpoint first
-        # If this endpoint doesn't work, we'll fall back to a more standard one
+        # Prepare the API request - try multiple recommended endpoints
+        # If one endpoint doesn't work, we'll try the next one
         try_endpoints = [
             "https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image",
+            "https://api.stability.ai/v1/generation/realistic-vision-v6/text-to-image",
             "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
             "https://api.stability.ai/v1/generation/stable-diffusion-v1-5/text-to-image"
         ]
-
-        # Start with the first endpoint
-        url = try_endpoints[0]
 
         headers = {
             "Authorization": f"Bearer {STABILITY_API_KEY}",
@@ -378,23 +376,39 @@ def generate_ai_image(prompt: str) -> str:
             "width": 768,     # Square format works well for most platforms
             "samples": 1,
             "steps": 30,
-            "style_preset": "product"
+            # Valid style presets: analog-film, anime, cinematic, comic-book, digital-art, enhance,
+            # fantasy-art, isometric, line-art, low-poly, modeling-compound, neon-punk, origami,
+            # photographic, pixel-art, 3d-model, tile-texture
+            "style_preset": "photographic"
         }
 
-        # Make the API request
-        logger.info(f"Sending image generation request to Stability AI")
-        logger.info(f"API URL: {url}")
-        logger.info(f"Request body: {body}")
+        # Try each endpoint until one works
+        response = None
+        success = False
 
-        response = requests.post(url, headers=headers, json=body)
+        for endpoint_url in try_endpoints:
+            try:
+                # Make the API request
+                logger.info(f"Trying endpoint: {endpoint_url}")
+                logger.info(f"Request body: {body}")
 
-        # Log the response status and headers for debugging
-        logger.info(f"Response status code: {response.status_code}")
-        logger.info(f"Response headers: {response.headers}")
+                response = requests.post(endpoint_url, headers=headers, json=body, timeout=30)
 
-        if response.status_code != 200:
-            logger.error(f"Error generating image: {response.status_code} - {response.text}")
-            # Fall back to placeholder image
+                # Log the response status and headers for debugging
+                logger.info(f"Response status code: {response.status_code}")
+
+                if response.status_code == 200:
+                    logger.info(f"Successfully generated image with endpoint: {endpoint_url}")
+                    success = True
+                    break
+                else:
+                    logger.warning(f"Endpoint {endpoint_url} returned status code {response.status_code}: {response.text}")
+            except Exception as endpoint_error:
+                logger.warning(f"Error with endpoint {endpoint_url}: {str(endpoint_error)}")
+                continue
+
+        if not success:
+            logger.error("All endpoints failed. Falling back to placeholder image.")
             return create_placeholder_image(prompt)
 
         # Try to parse the response as JSON
