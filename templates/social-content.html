@@ -33,7 +33,7 @@
                         <form id="socialForm" class="space-y-4">
                             <div>
                                 <label for="content_title" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Content Title/Topic
+                                    Content Title/Topic*
                                 </label>
                                 <input
                                     type="text"
@@ -47,7 +47,7 @@
 
                             <div>
                                 <label for="platform" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Social Media Platform
+                                    Social Media Platform*
                                 </label>
                                 <select
                                     id="platform"
@@ -61,6 +61,116 @@
                                     <option value="linkedin">LinkedIn</option>
                                     <option value="tiktok">TikTok</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label for="product_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Product Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="product_name"
+                                    name="product_name"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., DavidPutra 3000"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="product_category" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Product Category
+                                </label>
+                                <input
+                                    type="text"
+                                    id="product_category"
+                                    name="product_category"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., Bike, Electronics, Clothing"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="key_features" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Key Features (comma-separated)
+                                </label>
+                                <textarea
+                                    id="key_features"
+                                    name="key_features"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows="3"
+                                    placeholder="e.g., 10000 cc engine, instant braking, mileage - upto moon"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label for="special_features" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Special Features
+                                </label>
+                                <input
+                                    type="text"
+                                    id="special_features"
+                                    name="special_features"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., Pedal is available, Voice control"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="target_audience" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Target Audience
+                                </label>
+                                <input
+                                    type="text"
+                                    id="target_audience"
+                                    name="target_audience"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., Young adults, Professionals, Fitness enthusiasts"
+                                />
+                            </div>
+
+                            <div>
+                                <label for="tone" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Tone
+                                </label>
+                                <select
+                                    id="tone"
+                                    name="tone"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="engaging">Engaging</option>
+                                    <option value="professional">Professional</option>
+                                    <option value="friendly">Friendly</option>
+                                    <option value="humorous">Humorous</option>
+                                    <option value="excited">Excited</option>
+                                    <option value="formal">Formal</option>
+                                </select>
+                            </div>
+
+                            <div class="flex space-x-4">
+                                <div class="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="include_hashtags"
+                                        name="include_hashtags"
+                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        checked
+                                    />
+                                    <label for="include_hashtags" class="ml-2 block text-sm text-gray-700">
+                                        Include Hashtags
+                                    </label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="include_emojis"
+                                        name="include_emojis"
+                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        checked
+                                    />
+                                    <label for="include_emojis" class="ml-2 block text-sm text-gray-700">
+                                        Include Emojis
+                                    </label>
+                                </div>
                             </div>
 
                             <div id="error-message" class="text-red-600 text-sm hidden"></div>
@@ -174,9 +284,33 @@
                     const formData = new FormData(socialForm);
                     const content_title = formData.get('content_title');
                     const platform = formData.get('platform');
+                    const product_name = formData.get('product_name');
+                    const product_category = formData.get('product_category');
+                    const key_features = formData.get('key_features');
+                    const special_features = formData.get('special_features');
+                    const target_audience = formData.get('target_audience');
+                    const tone = formData.get('tone');
+                    const include_hashtags = formData.get('include_hashtags') === 'on';
+                    const include_emojis = formData.get('include_emojis') === 'on';
+
+                    // Build query parameters
+                    const params = new URLSearchParams({
+                        content_title,
+                        platform,
+                        include_hashtags,
+                        include_emojis
+                    });
+
+                    // Add optional parameters if they exist
+                    if (product_name) params.append('product_name', product_name);
+                    if (product_category) params.append('product_category', product_category);
+                    if (key_features) params.append('key_features', key_features);
+                    if (special_features) params.append('special_features', special_features);
+                    if (target_audience) params.append('target_audience', target_audience);
+                    if (tone) params.append('tone', tone);
 
                     // Send API request
-                    const response = await fetch(`/api/social_content?content_title=${encodeURIComponent(content_title)}&platform=${encodeURIComponent(platform)}`);
+                    const response = await fetch(`/api/social_content?${params.toString()}`);
 
                     if (!response.ok) {
                         throw new Error('Failed to generate social content');
