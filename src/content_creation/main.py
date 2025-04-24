@@ -51,5 +51,20 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Home route
 @app.get("/")
-def home():
-    return {"message": "Welcome to the AI Content Creation API!"}
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# Ad Generation route
+@app.get("/ad-generation")
+async def ad_generation(request: Request):
+    return templates.TemplateResponse("ad-generation.html", {"request": request})
+
+# Social Content route
+@app.get("/social-content")
+async def social_content(request: Request):
+    return templates.TemplateResponse("social-content.html", {"request": request})
+
+# Video Generation route
+@app.get("/video-generation")
+async def video_generation(request: Request):
+    return templates.TemplateResponse("video-generation.html", {"request": request})
