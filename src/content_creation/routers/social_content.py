@@ -88,7 +88,8 @@ def generate_social_content(request: SocialContentRequest):
     """
 
     try:
-        response = openai.ChatCompletion.create(
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=300,
@@ -96,10 +97,8 @@ def generate_social_content(request: SocialContentRequest):
         )
         logger.info(f"OpenAI API response for social content: {response}")
 
-        if "choices" in response and len(response["choices"]) > 0:
-            return response["choices"][0]["message"]["content"]
-        else:
-            raise HTTPException(status_code=500, detail="Unexpected response structure from OpenAI API.")
+        # Access the content from the new API response structure
+        return response.choices[0].message.content
 
     except Exception as e:
         logger.error(f"Error generating social content: {str(e)}")

@@ -34,7 +34,7 @@ class AdRequest(BaseModel):
 
 def generate_ai_ad(brand_name: str, product_name: str, target_audience: str, key_features: list[str], tone: str):
     """Generate an AI-powered advertisement copy using OpenAI's GPT-3.5 model."""
-    
+
     prompt = f"""
     Create a {tone} advertisement for a product.
     Brand: {brand_name}
@@ -46,16 +46,14 @@ def generate_ai_ad(brand_name: str, product_name: str, target_audience: str, key
     """
 
     try:
-        response = openai.ChatCompletion.create(
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=100
         )
         logger.info(f"OpenAI API response: {response}")  # Log the response for debugging
-        if "choices" in response and len(response["choices"]) > 0:
-            return response["choices"][0]["message"]["content"]
-        else:
-            raise HTTPException(status_code=500, detail="Unexpected response structure from OpenAI API.")
+        return response.choices[0].message.content
 
     except Exception as e:
         logger.error(f"Error generating ad with input: {brand_name}, {product_name}, {target_audience}, {key_features}, {tone}. Error: {str(e)}")
