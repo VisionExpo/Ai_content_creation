@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Content - AI Content Creation</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-blue-700 text-white shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="/" class="text-2xl font-bold">AI Content Creation</a>
+                <div class="flex space-x-6">
+                    <a href="/" class="hover:text-blue-200 transition-colors">Home</a>
+                    <a href="/ad-generation" class="hover:text-blue-200 transition-colors">Ad Generation</a>
+                    <a href="/social-content" class="hover:text-blue-200 transition-colors">Social Content</a>
+                    <a href="/video-generation" class="hover:text-blue-200 transition-colors">Video Generation</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-6">Social Media Content Generator</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Create Social Content</h2>
+
+                        <form id="socialForm" class="space-y-4">
+                            <div>
+                                <label for="content_title" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Content Title/Topic
+                                </label>
+                                <input
+                                    type="text"
+                                    id="content_title"
+                                    name="content_title"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                    placeholder="e.g., New Product Launch, Summer Sale, etc."
+                                />
+                            </div>
+
+                            <div>
+                                <label for="platform" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Social Media Platform
+                                </label>
+                                <select
+                                    id="platform"
+                                    name="platform"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="instagram">Instagram</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="twitter">Twitter</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="tiktok">TikTok</option>
+                                </select>
+                            </div>
+
+                            <div id="error-message" class="text-red-600 text-sm hidden"></div>
+
+                            <button
+                                type="submit"
+                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                id="generateBtn"
+                            >
+                                Generate Content
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="mt-6 bg-white rounded-lg shadow-md p-6 bg-gray-50">
+                        <h3 class="text-lg font-semibold mb-3">Tips for Great Social Content</h3>
+                        <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                            <li>Be specific about your topic to get more targeted content</li>
+                            <li>Different platforms have different content styles and lengths</li>
+                            <li>Consider your audience demographics when selecting a platform</li>
+                            <li>Add relevant hashtags to increase visibility</li>
+                            <li>Include a clear call-to-action in your posts</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6 h-full">
+                        <h2 class="text-xl font-semibold mb-4">Generated Content</h2>
+
+                        <div id="loading" class="flex items-center justify-center h-64 hidden">
+                            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                        </div>
+
+                        <div id="result" class="hidden">
+                            <div class="bg-gray-50 p-4 rounded-md border border-gray-200 min-h-[300px]">
+                                <div class="mb-3">
+                                    <span id="platform-badge" class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium capitalize">
+                                        Instagram
+                                    </span>
+                                </div>
+
+                                <p id="content-text" class="whitespace-pre-line"></p>
+
+                                <div class="mt-6 flex justify-end">
+                                    <button
+                                        id="copyBtn"
+                                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-sm flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                        </svg>
+                                        Copy to Clipboard
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <p>Fill out the form and click "Generate Content" to create your social media post</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold">AI Content Creation</h3>
+                    <p class="text-gray-400 mt-1">Create amazing content with AI</p>
+                </div>
+
+                <div class="mt-6 md:mt-0">
+                    <p>&copy; 2023 AI Content Creation. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const socialForm = document.getElementById('socialForm');
+            const generateBtn = document.getElementById('generateBtn');
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('result');
+            const emptyStateEl = document.getElementById('empty-state');
+            const contentTextEl = document.getElementById('content-text');
+            const platformBadgeEl = document.getElementById('platform-badge');
+            const errorMessageEl = document.getElementById('error-message');
+            const copyBtn = document.getElementById('copyBtn');
+
+            socialForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Show loading state
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating...';
+                loadingEl.classList.remove('hidden');
+                resultEl.classList.add('hidden');
+                emptyStateEl.classList.add('hidden');
+                errorMessageEl.classList.add('hidden');
+
+                try {
+                    // Get form data
+                    const formData = new FormData(socialForm);
+                    const content_title = formData.get('content_title');
+                    const platform = formData.get('platform');
+
+                    // Send API request
+                    const response = await fetch(`/api/social_content?content_title=${encodeURIComponent(content_title)}&platform=${encodeURIComponent(platform)}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to generate social content');
+                    }
+
+                    const data = await response.json();
+
+                    // Display result
+                    contentTextEl.textContent = data.message;
+                    platformBadgeEl.textContent = platform;
+                    loadingEl.classList.add('hidden');
+                    resultEl.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    errorMessageEl.textContent = 'Failed to generate social content. Please try again.';
+                    errorMessageEl.classList.remove('hidden');
+                    loadingEl.classList.add('hidden');
+                    emptyStateEl.classList.remove('hidden');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Content';
+                }
+            });
+
+            // Copy to clipboard functionality
+            copyBtn.addEventListener('click', function() {
+                const textToCopy = contentTextEl.textContent;
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
