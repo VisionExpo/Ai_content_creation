@@ -421,92 +421,80 @@ def create_placeholder_image(prompt: str) -> str:
         # Log the full image path
         logger.info(f"Creating placeholder image at: {image_path}")
 
-        # Create a blank image
-        width, height = 800, 600
-        background_color = (240, 240, 240)  # Light gray
-        text_color = (60, 60, 60)  # Dark gray
-
-        image = Image.new('RGB', (width, height), background_color)
-        draw = ImageDraw.Draw(image)
-
-        # Try to load a font, use default if not available
+        # Create a simple colored image for testing
         try:
-            # Try to find a system font
-            system_fonts = [
-                "arial.ttf",
-                "Arial.ttf",
-                "Verdana.ttf",
-                "DejaVuSans.ttf",
-                "Tahoma.ttf",
-                "calibri.ttf"
-            ]
+            # Create a simple colored rectangle
+            width, height = 800, 600
+            image = Image.new('RGB', (width, height), (200, 200, 240))  # Light blue-gray
 
-            font = None
-            for font_name in system_fonts:
-                try:
-                    font = ImageFont.truetype(font_name, 24)
-                    logger.info(f"Successfully loaded font: {font_name}")
-                    break
-                except IOError:
-                    continue
+            # Draw some shapes for visual interest
+            draw = ImageDraw.Draw(image)
 
-            if font is None:
-                logger.warning("Could not find any system fonts, using default font")
-                font = ImageFont.load_default()
+            # Draw a border
+            draw.rectangle([(0, 0), (width-1, height-1)], outline=(100, 100, 180), width=10)
 
-        except Exception as font_error:
-            logger.error(f"Error loading fonts: {str(font_error)}")
-            font = ImageFont.load_default()
+            # Draw some rectangles
+            draw.rectangle([(50, 50), (width-50, height-50)], outline=(150, 150, 210), width=5)
 
-        # Draw a border
-        border_width = 4
-        draw.rectangle(
-            [(border_width, border_width), (width - border_width, height - border_width)],
-            outline=(180, 180, 180),
-            width=border_width
-        )
+            # Draw a circle
+            draw.ellipse([(width//4, height//4), (3*width//4, 3*height//4)], outline=(100, 100, 180), width=5)
 
-        # Add title
-        title = "Image Placeholder"
-        title_font_size = 36
-        try:
-            title_font = ImageFont.truetype(font.path, title_font_size)
-        except Exception as title_font_error:
-            logger.error(f"Error creating title font: {str(title_font_error)}")
-            title_font = font
+            # Add text
+            try:
+                # Try to use a system font
+                font = None
+                system_fonts = ["Arial.ttf", "Verdana.ttf", "Tahoma.ttf", "calibri.ttf"]
 
-        title_width = draw.textlength(title, font=title_font)
-        draw.text(((width - title_width) / 2, 50), title, font=title_font, fill=text_color)
+                for font_name in system_fonts:
+                    try:
+                        font = ImageFont.truetype(font_name, 36)
+                        logger.info(f"Successfully loaded font: {font_name}")
+                        break
+                    except Exception:
+                        continue
 
-        # Add prompt text with wrapping
-        prompt_lines = textwrap.wrap(f"Prompt: {prompt}", width=40)
-        y_position = 150
-        for line in prompt_lines:
-            line_width = draw.textlength(line, font=font)
-            draw.text(((width - line_width) / 2, y_position), line, font=font, fill=text_color)
-            y_position += 30
+                if font is None:
+                    logger.warning("Using default font")
+                    font = ImageFont.load_default()
 
-        # Add note about API key
-        note = "Image generation requires a valid Stability API key."
-        note_width = draw.textlength(note, font=font)
-        draw.text(((width - note_width) / 2, height - 100), note, font=font, fill=text_color)
+                # Add title text
+                title = "Test Image"
+                draw.text((width//2 - 100, 100), title, fill=(50, 50, 100), font=font)
 
-        # Save the image
-        try:
+                # Add prompt text
+                prompt_text = f"Prompt: {prompt[:50]}..."
+                draw.text((width//2 - 200, height//2), prompt_text, fill=(50, 50, 100), font=font)
+
+            except Exception as text_error:
+                logger.error(f"Error adding text: {str(text_error)}")
+
+            # Save the image
             image.save(image_path)
-            logger.info(f"Successfully saved placeholder image to {image_path}")
-        except Exception as save_error:
-            logger.error(f"Error saving image: {str(save_error)}")
-            raise
+            logger.info(f"Successfully saved test image to {image_path}")
 
-        # Return the URL path to the image
-        image_url = f"/static/images/generated/{filename}"
-        logger.info(f"Returning image URL: {image_url}")
-        return image_url
+            # Return the URL path to the image
+            image_url = f"/static/images/generated/{filename}"
+            logger.info(f"Returning image URL: {image_url}")
+            return image_url
+
+        except Exception as img_error:
+            logger.error(f"Error creating test image: {str(img_error)}")
+            raise
 
     except Exception as e:
         logger.error(f"Error generating placeholder image: {str(e)}")
-        return None
+        # Return a hardcoded test image path for debugging
+        test_image = "/static/images/generated/test_image.png"
+
+        # Try to create a very simple test image
+        try:
+            simple_image = Image.new('RGB', (400, 300), (255, 0, 0))  # Red rectangle
+            simple_image.save(STATIC_DIR / "test_image.png")
+            logger.info("Created fallback test image")
+        except Exception as simple_error:
+            logger.error(f"Error creating simple test image: {str(simple_error)}")
+
+        return test_image
 
 # Define the API endpoints
 @router.post("/social_content")

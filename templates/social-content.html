@@ -246,9 +246,11 @@
 
                                 <div id="generated-image-container" class="hidden mb-4">
                                     <div class="border border-gray-200 rounded-md overflow-hidden mb-2">
-                                        <img id="generated-image" src="" alt="Generated image" class="w-full h-auto" />
+                                        <img id="generated-image" src="" alt="Generated image" class="w-full h-auto"
+                                            onerror="this.onerror=null; this.src='/static/images/generated/test.txt'; console.error('Image failed to load');" />
                                     </div>
                                     <p id="image-prompt-display" class="text-xs text-gray-500 italic"></p>
+                                    <p id="image-error" class="text-xs text-red-500 hidden">Failed to load image. Using fallback.</p>
                                 </div>
 
                                 <p id="content-text" class="whitespace-pre-line"></p>
@@ -405,17 +407,35 @@
 
                     // Display image if generated
                     if (data.image_url) {
+                        console.log("Image URL received:", data.image_url);
+
+                        // Set up image error handling
+                        generatedImage.onerror = function() {
+                            console.error("Failed to load image:", data.image_url);
+                            document.getElementById('image-error').classList.remove('hidden');
+                            // Keep the container visible to show the error
+                        };
+
+                        // Set up image load success handling
+                        generatedImage.onload = function() {
+                            console.log("Image loaded successfully");
+                            document.getElementById('image-error').classList.add('hidden');
+                            // Set up download button
+                            downloadImageBtn.href = data.image_url;
+                            downloadImageBtn.download = data.image_url.split('/').pop();
+                            downloadImageBtn.classList.remove('hidden');
+                        };
+
+                        // Set the image source
                         generatedImage.src = data.image_url;
                         imagePromptDisplay.textContent = `Prompt: ${data.image_prompt}`;
                         generatedImageContainer.classList.remove('hidden');
-
-                        // Set up download button
-                        downloadImageBtn.href = data.image_url;
-                        downloadImageBtn.download = data.image_url.split('/').pop();
-                        downloadImageBtn.classList.remove('hidden');
                     } else if (generate_image) {
-                        // If image was requested but not generated, hide the container
-                        generatedImageContainer.classList.add('hidden');
+                        // If image was requested but not generated, show error
+                        console.warn("Image was requested but not generated");
+                        generatedImageContainer.classList.remove('hidden');
+                        document.getElementById('image-error').classList.remove('hidden');
+                        document.getElementById('image-error').textContent = "Image generation failed. Please try again.";
                         downloadImageBtn.classList.add('hidden');
                     }
 
