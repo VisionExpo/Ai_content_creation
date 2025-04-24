@@ -589,11 +589,20 @@ async def create_social_content(request: SocialContentRequest):
                     # Use product details to create a default image prompt
                     product_desc = f"{request.product_name}" if request.product_name else request.content_title
                     category_desc = f" {request.product_category}" if request.product_category else ""
-                    features_desc = ""
-                    if request.key_features and len(request.key_features) > 0:
-                        features_desc = f" with {', '.join(request.key_features[:2])}"
 
-                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+                    # Clean up key features to remove any quotes
+                    clean_features = []
+                    if request.key_features and len(request.key_features) > 0:
+                        for feature in request.key_features[:2]:
+                            clean_feature = feature.replace('"', '').replace("'", "").strip()
+                            if clean_feature:
+                                clean_features.append(clean_feature)
+
+                    features_desc = ""
+                    if clean_features:
+                        features_desc = f" with {', '.join(clean_features)}"
+
+                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, white background, studio lighting, high quality, detailed"
 
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
@@ -672,11 +681,20 @@ async def get_social_content(
                     # Use product details to create a default image prompt
                     product_desc = f"{product_name}" if product_name else content_title
                     category_desc = f" {product_category}" if product_category else ""
-                    features_desc = ""
-                    if key_features_list and len(key_features_list) > 0:
-                        features_desc = f" with {', '.join(key_features_list[:2])}"
 
-                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+                    # Clean up key features to remove any quotes
+                    clean_features = []
+                    if key_features_list and len(key_features_list) > 0:
+                        for feature in key_features_list[:2]:
+                            clean_feature = feature.replace('"', '').replace("'", "").strip()
+                            if clean_feature:
+                                clean_features.append(clean_feature)
+
+                    features_desc = ""
+                    if clean_features:
+                        features_desc = f" with {', '.join(clean_features)}"
+
+                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, white background, studio lighting, high quality, detailed"
 
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
