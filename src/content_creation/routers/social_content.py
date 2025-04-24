@@ -32,7 +32,11 @@ generation_config = {
 
 # Create directory for storing images if it doesn't exist
 STATIC_DIR = Path("static/images/generated")
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Static directory created/verified at: {STATIC_DIR.absolute()}")
+except Exception as e:
+    logger.error(f"Error creating static directory: {str(e)}")
 
 # Create FastAPI router
 router = APIRouter()
@@ -403,10 +407,19 @@ def create_placeholder_image(prompt: str) -> str:
         import hashlib
         import os
 
+        # Log the static directory path
+        logger.info(f"Static directory path: {STATIC_DIR}")
+
+        # Ensure the directory exists
+        os.makedirs(STATIC_DIR, exist_ok=True)
+
         # Create a unique filename
         timestamp = int(time.time())
         filename = f"placeholder_{timestamp}_{hashlib.md5(prompt.encode()).hexdigest()[:8]}.png"
         image_path = STATIC_DIR / filename
+
+        # Log the full image path
+        logger.info(f"Creating placeholder image at: {image_path}")
 
         # Create a blank image
         width, height = 800, 600
@@ -432,14 +445,17 @@ def create_placeholder_image(prompt: str) -> str:
             for font_name in system_fonts:
                 try:
                     font = ImageFont.truetype(font_name, 24)
+                    logger.info(f"Successfully loaded font: {font_name}")
                     break
                 except IOError:
                     continue
 
             if font is None:
+                logger.warning("Could not find any system fonts, using default font")
                 font = ImageFont.load_default()
 
-        except Exception:
+        except Exception as font_error:
+            logger.error(f"Error loading fonts: {str(font_error)}")
             font = ImageFont.load_default()
 
         # Draw a border
@@ -455,7 +471,8 @@ def create_placeholder_image(prompt: str) -> str:
         title_font_size = 36
         try:
             title_font = ImageFont.truetype(font.path, title_font_size)
-        except:
+        except Exception as title_font_error:
+            logger.error(f"Error creating title font: {str(title_font_error)}")
             title_font = font
 
         title_width = draw.textlength(title, font=title_font)
@@ -475,9 +492,17 @@ def create_placeholder_image(prompt: str) -> str:
         draw.text(((width - note_width) / 2, height - 100), note, font=font, fill=text_color)
 
         # Save the image
-        image.save(image_path)
+        try:
+            image.save(image_path)
+            logger.info(f"Successfully saved placeholder image to {image_path}")
+        except Exception as save_error:
+            logger.error(f"Error saving image: {str(save_error)}")
+            raise
 
-        return f"/static/images/generated/{filename}"
+        # Return the URL path to the image
+        image_url = f"/static/images/generated/{filename}"
+        logger.info(f"Returning image URL: {image_url}")
+        return image_url
 
     except Exception as e:
         logger.error(f"Error generating placeholder image: {str(e)}")
