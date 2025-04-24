@@ -321,12 +321,17 @@ def generate_social_content(request: SocialContentRequest):
         logger.error(f"Error generating social content: {str(e)}")
         raise HTTPException(status_code=500, detail="Error generating social content.")
 
-def generate_image(prompt: str) -> str:
+def generate_ai_image(prompt: str) -> str:
     """Generate an image using Stability AI API and return the path to the saved image."""
     try:
         if not STABILITY_API_KEY:
             logger.warning("Stability API key is missing. Cannot generate image.")
             return None
+
+        # For testing purposes, if no API key is available, generate a placeholder image
+        if STABILITY_API_KEY.strip() == "":
+            logger.warning("Using placeholder image generation since no Stability API key is provided")
+            return create_placeholder_image(prompt)
 
         # Prepare the API request
         url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
@@ -352,11 +357,13 @@ def generate_image(prompt: str) -> str:
         }
 
         # Make the API request
+        logger.info(f"Sending image generation request to Stability AI with prompt: {prompt}")
         response = requests.post(url, headers=headers, json=body)
 
         if response.status_code != 200:
-            logger.error(f"Error generating image: {response.text}")
-            return None
+            logger.error(f"Error generating image: {response.status_code} - {response.text}")
+            # Fall back to placeholder image
+            return create_placeholder_image(prompt)
 
         data = response.json()
 
@@ -380,10 +387,100 @@ def generate_image(prompt: str) -> str:
             return f"/static/images/generated/{filename}"
         else:
             logger.error("No image data in response")
-            return None
+            return create_placeholder_image(prompt)
 
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}")
+        return create_placeholder_image(prompt)
+
+def create_placeholder_image(prompt: str) -> str:
+    """Generate a placeholder image with text when API is not available."""
+    try:
+        # Import necessary libraries
+        from PIL import Image, ImageDraw, ImageFont
+        import textwrap
+        import time
+        import hashlib
+        import os
+
+        # Create a unique filename
+        timestamp = int(time.time())
+        filename = f"placeholder_{timestamp}_{hashlib.md5(prompt.encode()).hexdigest()[:8]}.png"
+        image_path = STATIC_DIR / filename
+
+        # Create a blank image
+        width, height = 800, 600
+        background_color = (240, 240, 240)  # Light gray
+        text_color = (60, 60, 60)  # Dark gray
+
+        image = Image.new('RGB', (width, height), background_color)
+        draw = ImageDraw.Draw(image)
+
+        # Try to load a font, use default if not available
+        try:
+            # Try to find a system font
+            system_fonts = [
+                "arial.ttf",
+                "Arial.ttf",
+                "Verdana.ttf",
+                "DejaVuSans.ttf",
+                "Tahoma.ttf",
+                "calibri.ttf"
+            ]
+
+            font = None
+            for font_name in system_fonts:
+                try:
+                    font = ImageFont.truetype(font_name, 24)
+                    break
+                except IOError:
+                    continue
+
+            if font is None:
+                font = ImageFont.load_default()
+
+        except Exception:
+            font = ImageFont.load_default()
+
+        # Draw a border
+        border_width = 4
+        draw.rectangle(
+            [(border_width, border_width), (width - border_width, height - border_width)],
+            outline=(180, 180, 180),
+            width=border_width
+        )
+
+        # Add title
+        title = "Image Placeholder"
+        title_font_size = 36
+        try:
+            title_font = ImageFont.truetype(font.path, title_font_size)
+        except:
+            title_font = font
+
+        title_width = draw.textlength(title, font=title_font)
+        draw.text(((width - title_width) / 2, 50), title, font=title_font, fill=text_color)
+
+        # Add prompt text with wrapping
+        prompt_lines = textwrap.wrap(f"Prompt: {prompt}", width=40)
+        y_position = 150
+        for line in prompt_lines:
+            line_width = draw.textlength(line, font=font)
+            draw.text(((width - line_width) / 2, y_position), line, font=font, fill=text_color)
+            y_position += 30
+
+        # Add note about API key
+        note = "Image generation requires a valid Stability API key."
+        note_width = draw.textlength(note, font=font)
+        draw.text(((width - note_width) / 2, height - 100), note, font=font, fill=text_color)
+
+        # Save the image
+        image.save(image_path)
+
+        return f"/static/images/generated/{filename}"
+
+    except Exception as e:
+        logger.error(f"Error generating placeholder image: {str(e)}")
         return None
 
 # Define the API endpoints
@@ -391,32 +488,47 @@ def generate_image(prompt: str) -> str:
 async def create_social_content(request: SocialContentRequest):
     """Endpoint to generate social media content using AI."""
     try:
+        # First generate the text content
         content = generate_social_content(request)
         response_data = {"message": content, "platform": request.platform}
 
         # Generate image if requested
         if request.generate_image:
-            # Create image prompt if not provided
-            image_prompt = request.image_prompt
-            if not image_prompt:
-                # Use product details to create a default image prompt
-                product_desc = f"{request.product_name}" if request.product_name else request.content_title
-                category_desc = f" {request.product_category}" if request.product_category else ""
-                features_desc = ""
-                if request.key_features and len(request.key_features) > 0:
-                    features_desc = f" with {', '.join(request.key_features[:2])}"
+            try:
+                # Create image prompt if not provided
+                image_prompt = request.image_prompt
+                if not image_prompt:
+                    # Use product details to create a default image prompt
+                    product_desc = f"{request.product_name}" if request.product_name else request.content_title
+                    category_desc = f" {request.product_category}" if request.product_category else ""
+                    features_desc = ""
+                    if request.key_features and len(request.key_features) > 0:
+                        features_desc = f" with {', '.join(request.key_features[:2])}"
 
-                image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
 
-            # Generate the image
-            image_path = generate_image(image_prompt)
-            if image_path:
-                response_data["image_url"] = image_path
-                response_data["image_prompt"] = image_prompt
+                # Generate the image
+                logger.info(f"Generating image with prompt: {image_prompt}")
+                image_path = generate_ai_image(image_prompt)
+
+                # Add image data to response if successful
+                if image_path:
+                    response_data["image_url"] = image_path
+                    response_data["image_prompt"] = image_prompt
+                    logger.info(f"Image generated successfully: {image_path}")
+                else:
+                    logger.warning("Image generation returned None")
+            except Exception as img_error:
+                # Log the error but continue with text content
+                logger.error(f"Error during image generation: {str(img_error)}")
+                # We don't add image data to the response, but we still return the text content
 
         return response_data
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        logger.error(f"Unexpected error in create_social_content: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": f"An error occurred: {str(e)}"})
 
 # Keep the GET endpoint for backward compatibility
 @router.get("/social_content")
@@ -457,28 +569,43 @@ async def get_social_content(
             image_prompt=image_prompt
         )
 
+        # First generate the text content
         content = generate_social_content(request)
         response_data = {"message": content, "platform": platform}
 
         # Generate image if requested
         if generate_image:
-            # Create image prompt if not provided
-            if not image_prompt:
-                # Use product details to create a default image prompt
-                product_desc = f"{product_name}" if product_name else content_title
-                category_desc = f" {product_category}" if product_category else ""
-                features_desc = ""
-                if key_features_list and len(key_features_list) > 0:
-                    features_desc = f" with {', '.join(key_features_list[:2])}"
+            try:
+                # Create image prompt if not provided
+                if not image_prompt:
+                    # Use product details to create a default image prompt
+                    product_desc = f"{product_name}" if product_name else content_title
+                    category_desc = f" {product_category}" if product_category else ""
+                    features_desc = ""
+                    if key_features_list and len(key_features_list) > 0:
+                        features_desc = f" with {', '.join(key_features_list[:2])}"
 
-                image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
+                    image_prompt = f"Professional product photo of {product_desc}{category_desc}{features_desc}, studio lighting, high quality, detailed"
 
-            # Generate the image
-            image_path = generate_image(image_prompt)
-            if image_path:
-                response_data["image_url"] = image_path
-                response_data["image_prompt"] = image_prompt
+                # Generate the image
+                logger.info(f"Generating image with prompt: {image_prompt}")
+                image_path = generate_ai_image(image_prompt)
+
+                # Add image data to response if successful
+                if image_path:
+                    response_data["image_url"] = image_path
+                    response_data["image_prompt"] = image_prompt
+                    logger.info(f"Image generated successfully: {image_path}")
+                else:
+                    logger.warning("Image generation returned None")
+            except Exception as img_error:
+                # Log the error but continue with text content
+                logger.error(f"Error during image generation: {str(img_error)}")
+                # We don't add image data to the response, but we still return the text content
 
         return response_data
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    except Exception as e:
+        logger.error(f"Unexpected error in get_social_content: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": f"An error occurred: {str(e)}"})

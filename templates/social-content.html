@@ -382,11 +382,22 @@
                     // Send API request
                     const response = await fetch(`/api/social_content?${params.toString()}`);
 
+                    // Parse the JSON response
+                    const data = await response.json();
+
+                    // Check for error in the response
                     if (!response.ok) {
-                        throw new Error('Failed to generate social content');
+                        let errorMessage = 'Failed to generate social content';
+                        if (data && data.detail) {
+                            errorMessage = data.detail;
+                        }
+                        throw new Error(errorMessage);
                     }
 
-                    const data = await response.json();
+                    // Check if we have content in the response
+                    if (!data.message) {
+                        throw new Error('No content was generated. Please try again.');
+                    }
 
                     // Display result
                     contentTextEl.textContent = data.message;
@@ -402,6 +413,10 @@
                         downloadImageBtn.href = data.image_url;
                         downloadImageBtn.download = data.image_url.split('/').pop();
                         downloadImageBtn.classList.remove('hidden');
+                    } else if (generate_image) {
+                        // If image was requested but not generated, hide the container
+                        generatedImageContainer.classList.add('hidden');
+                        downloadImageBtn.classList.add('hidden');
                     }
 
                     loadingEl.classList.add('hidden');
@@ -409,7 +424,7 @@
 
                 } catch (error) {
                     console.error('Error:', error);
-                    errorMessageEl.textContent = 'Failed to generate social content. Please try again.';
+                    errorMessageEl.textContent = error.message || 'Failed to generate social content. Please try again.';
                     errorMessageEl.classList.remove('hidden');
                     loadingEl.classList.add('hidden');
                     emptyStateEl.classList.remove('hidden');
