@@ -338,20 +338,38 @@ def generate_ai_image(prompt: str) -> str:
             return create_placeholder_image(prompt)
 
         # Clean up the prompt to ensure it's properly formatted
-        # Remove any extra quotes that might be in the prompt
+        # Remove any extra quotes and avoid duplication
         clean_prompt = prompt.replace('"', '').replace("'", "")
 
+        # Check if the prompt already starts with our standard prefix
+        if clean_prompt.lower().startswith("professional product photo of"):
+            # Just use the cleaned prompt as is
+            base_prompt = clean_prompt
+        else:
+            # Add our standard prefix
+            base_prompt = f"Professional product photo of {clean_prompt}"
+
         # Enhanced prompt for better product images
-        enhanced_prompt = f"Professional product photo of {clean_prompt}, white background, studio lighting, high quality, detailed product photography"
+        enhanced_prompt = f"{base_prompt}, white background, studio lighting, high quality, detailed product photography"
         logger.info(f"Using enhanced prompt: {enhanced_prompt}")
 
         # Prepare the API request - try multiple recommended endpoints
         # If one endpoint doesn't work, we'll try the next one
-        try_endpoints = [
-            "https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image",
-            "https://api.stability.ai/v1/generation/realistic-vision-v6/text-to-image",
-            "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-            "https://api.stability.ai/v1/generation/stable-diffusion-v1-5/text-to-image"
+        endpoints_config = [
+            # For stable-diffusion-xl-beta-v2-2-2, only one dimension can be > 512
+            {
+                "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image",
+                "width": 512,
+                "height": 512,
+                "style_preset": "photographic"
+            },
+            # For stable-diffusion-xl-1024-v1-0, specific dimension pairs are required
+            {
+                "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+                "width": 1024,
+                "height": 1024,
+                "style_preset": "photographic"
+            }
         ]
 
         headers = {
@@ -360,7 +378,8 @@ def generate_ai_image(prompt: str) -> str:
             "Accept": "application/json"
         }
 
-        body = {
+        # Base request body
+        base_body = {
             "text_prompts": [
                 {
                     "text": enhanced_prompt,
@@ -372,22 +391,24 @@ def generate_ai_image(prompt: str) -> str:
                 }
             ],
             "cfg_scale": 10,  # Increased for more prompt adherence
-            "height": 768,    # Standard size for product images
-            "width": 768,     # Square format works well for most platforms
             "samples": 1,
-            "steps": 30,
-            # Valid style presets: analog-film, anime, cinematic, comic-book, digital-art, enhance,
-            # fantasy-art, isometric, line-art, low-poly, modeling-compound, neon-punk, origami,
-            # photographic, pixel-art, 3d-model, tile-texture
-            "style_preset": "photographic"
+            "steps": 30
         }
 
         # Try each endpoint until one works
         response = None
         success = False
 
-        for endpoint_url in try_endpoints:
+        for endpoint_config in endpoints_config:
             try:
+                # Create the request body with the correct dimensions for this endpoint
+                body = base_body.copy()
+                body["width"] = endpoint_config["width"]
+                body["height"] = endpoint_config["height"]
+                body["style_preset"] = endpoint_config["style_preset"]
+
+                endpoint_url = endpoint_config["url"]
+
                 # Make the API request
                 logger.info(f"Trying endpoint: {endpoint_url}")
                 logger.info(f"Request body: {body}")
@@ -404,7 +425,7 @@ def generate_ai_image(prompt: str) -> str:
                 else:
                     logger.warning(f"Endpoint {endpoint_url} returned status code {response.status_code}: {response.text}")
             except Exception as endpoint_error:
-                logger.warning(f"Error with endpoint {endpoint_url}: {str(endpoint_error)}")
+                logger.warning(f"Error with endpoint {endpoint_config['url']}: {str(endpoint_error)}")
                 continue
 
         if not success:
@@ -477,7 +498,6 @@ def create_placeholder_image(prompt: str) -> str:
     try:
         # Import necessary libraries
         from PIL import Image, ImageDraw, ImageFont
-        import textwrap
         import time
         import hashlib
         import os
