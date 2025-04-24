@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Generation - AI Content Creation</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-blue-700 text-white shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="/" class="text-2xl font-bold">AI Content Creation</a>
+                <div class="flex space-x-6">
+                    <a href="/" class="hover:text-blue-200 transition-colors">Home</a>
+                    <a href="/ad-generation" class="hover:text-blue-200 transition-colors">Ad Generation</a>
+                    <a href="/social-content" class="hover:text-blue-200 transition-colors">Social Content</a>
+                    <a href="/video-generation" class="hover:text-blue-200 transition-colors">Video Generation</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-6">AI Ad Generation</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Create Your Ad</h2>
+
+                        <form id="adForm" class="space-y-4">
+                            <div>
+                                <label for="brand_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Brand Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="brand_name"
+                                    name="brand_name"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label for="product_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Product Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="product_name"
+                                    name="product_name"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label for="target_audience" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Target Audience
+                                </label>
+                                <input
+                                    type="text"
+                                    id="target_audience"
+                                    name="target_audience"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                    placeholder="e.g., Young professionals, Parents, etc."
+                                />
+                            </div>
+
+                            <div>
+                                <label for="key_features" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Key Features (comma-separated)
+                                </label>
+                                <textarea
+                                    id="key_features"
+                                    name="key_features"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                    rows="3"
+                                    placeholder="e.g., Durable, Eco-friendly, Fast delivery"
+                                ></textarea>
+                            </div>
+
+                            <div>
+                                <label for="tone" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Tone
+                                </label>
+                                <select
+                                    id="tone"
+                                    name="tone"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="professional">Professional</option>
+                                    <option value="friendly">Friendly</option>
+                                    <option value="humorous">Humorous</option>
+                                    <option value="formal">Formal</option>
+                                    <option value="casual">Casual</option>
+                                    <option value="enthusiastic">Enthusiastic</option>
+                                </select>
+                            </div>
+
+                            <div id="error-message" class="text-red-600 text-sm hidden"></div>
+
+                            <button
+                                type="submit"
+                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                id="generateBtn"
+                            >
+                                Generate Ad
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="bg-white rounded-lg shadow-md p-6 h-full">
+                        <h2 class="text-xl font-semibold mb-4">Generated Ad</h2>
+
+                        <div id="loading" class="flex items-center justify-center h-64 hidden">
+                            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+                        </div>
+
+                        <div id="result" class="hidden">
+                            <div class="bg-gray-50 p-4 rounded-md border border-gray-200 min-h-[300px]">
+                                <p id="ad-copy" class="whitespace-pre-line"></p>
+
+                                <div class="mt-6 flex justify-end">
+                                    <button
+                                        id="copyBtn"
+                                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-sm flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                        </svg>
+                                        Copy to Clipboard
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <p>Fill out the form and click "Generate Ad" to create your ad copy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold">AI Content Creation</h3>
+                    <p class="text-gray-400 mt-1">Create amazing content with AI</p>
+                </div>
+
+                <div class="mt-6 md:mt-0">
+                    <p>&copy; 2023 AI Content Creation. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const adForm = document.getElementById('adForm');
+            const generateBtn = document.getElementById('generateBtn');
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('result');
+            const emptyStateEl = document.getElementById('empty-state');
+            const adCopyEl = document.getElementById('ad-copy');
+            const errorMessageEl = document.getElementById('error-message');
+            const copyBtn = document.getElementById('copyBtn');
+
+            adForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Show loading state
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating...';
+                loadingEl.classList.remove('hidden');
+                resultEl.classList.add('hidden');
+                emptyStateEl.classList.add('hidden');
+                errorMessageEl.classList.add('hidden');
+
+                try {
+                    // Get form data
+                    const formData = new FormData(adForm);
+                    const brand_name = formData.get('brand_name');
+                    const product_name = formData.get('product_name');
+                    const target_audience = formData.get('target_audience');
+                    const key_features_str = formData.get('key_features');
+                    const tone = formData.get('tone');
+
+                    // Convert key_features from comma-separated string to array
+                    const key_features = key_features_str
+                        .split(',')
+                        .map(feature => feature.trim())
+                        .filter(feature => feature !== '');
+
+                    // Prepare request data
+                    const requestData = {
+                        brand_name,
+                        product_name,
+                        target_audience,
+                        key_features,
+                        tone
+                    };
+
+                    // Send API request
+                    const response = await fetch('/api/generate_ad', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to generate ad');
+                    }
+
+                    const data = await response.json();
+
+                    // Display result
+                    adCopyEl.textContent = data.ad_copy;
+                    loadingEl.classList.add('hidden');
+                    resultEl.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    errorMessageEl.textContent = 'Failed to generate ad. Please try again.';
+                    errorMessageEl.classList.remove('hidden');
+                    loadingEl.classList.add('hidden');
+                    emptyStateEl.classList.remove('hidden');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Ad';
+                }
+            });
+
+            // Copy to clipboard functionality
+            copyBtn.addEventListener('click', function() {
+                const textToCopy = adCopyEl.textContent;
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
