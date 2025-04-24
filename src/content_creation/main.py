@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
-app = FastAPI(title="AI Content Creation API")
+app = FastAPI(title="Social.AI - AI Content Creation API")
 
 # Configure CORS
 app.add_middleware(
