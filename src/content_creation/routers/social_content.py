@@ -1,7 +1,6 @@
 import os
 import logging
-import requests
-import json
+import google.generativeai as genai
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -10,19 +9,21 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Hugging Face API URL
-HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+# Configure the Gemini API
+genai.configure(api_key=GEMINI_API_KEY)
 
-# Headers for Hugging Face API
-headers = {
-    "Authorization": f"Bearer {HUGGINGFACE_API_KEY}" if HUGGINGFACE_API_KEY else "",
-    "Content-Type": "application/json"
+# Set up the model
+generation_config = {
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 300,
 }
 
 # Create FastAPI router
@@ -231,7 +232,7 @@ def generate_social_content(request: SocialContentRequest):
     return content
 
 def generate_social_content(request: SocialContentRequest):
-    """Generate social media content using Hugging Face's API."""
+    """Generate social media content using Google's Gemini API."""
 
     # Create platform-specific instructions
     platform_instructions = {
@@ -264,8 +265,8 @@ def generate_social_content(request: SocialContentRequest):
     if request.target_audience:
         audience_info = f"Target Audience: {request.target_audience}"
 
-    # Build the prompt for Hugging Face
-    prompt = f"""<s>[INST]
+    # Build the prompt for Gemini
+    prompt = f"""
     {platform_instructions.get(request.platform.lower(), "Create a social media post")}
 
     Content Title/Topic: {request.content_title}
@@ -277,51 +278,32 @@ def generate_social_content(request: SocialContentRequest):
 
     {"Include relevant hashtags." if request.include_hashtags else "Do not include hashtags."}
     {"Use appropriate emojis to enhance engagement." if request.include_emojis else "Do not use emojis."}
-    [/INST]</s>
     """
 
     try:
-        # Try to use Hugging Face API
+        # Try to use Gemini API
         try:
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 300,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "do_sample": True
-                }
-            }
+            # Initialize the model
+            model = genai.GenerativeModel(
+                model_name="gemini-pro",
+                generation_config=generation_config
+            )
 
-            # Make the API request
-            response = requests.post(HUGGINGFACE_API_URL, headers=headers, json=payload)
-            logger.info(f"Hugging Face API response status: {response.status_code}")
+            # Generate content
+            response = model.generate_content(prompt)
+            logger.info(f"Gemini API response: {response}")
 
-            # Check if the request was successful
-            if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Hugging Face API response: {result}")
-
-                # Extract the generated text
-                if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
-                    # Extract just the response part (after the prompt)
-                    generated_text = result[0]["generated_text"]
-                    # Remove the prompt part if it's included in the response
-                    if "[/INST]" in generated_text:
-                        generated_text = generated_text.split("[/INST]")[1].strip()
-                    return generated_text
-                else:
-                    # If response structure is unexpected, use fallback
-                    logger.warning("Unexpected response structure from Hugging Face API. Using fallback.")
-                    return generate_fallback_content(request)
+            # Check if the response has text
+            if response.text:
+                return response.text.strip()
             else:
-                # If API returns an error, use fallback
-                logger.error(f"Hugging Face API error: {response.text}")
+                # If no text in response, use fallback
+                logger.warning("No text in Gemini API response. Using fallback.")
                 return generate_fallback_content(request)
 
         except Exception as api_error:
-            # If Hugging Face API fails, log the error and use fallback
-            logger.error(f"Error with Hugging Face API: {str(api_error)}")
+            # If Gemini API fails, log the error and use fallback
+            logger.error(f"Error with Gemini API: {str(api_error)}")
             logger.info("Using fallback content generation mechanism")
             return generate_fallback_content(request)
 
