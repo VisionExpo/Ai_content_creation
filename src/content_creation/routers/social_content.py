@@ -522,13 +522,17 @@ async def create_social_content(request: SocialContentRequest):
 
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
-                image_path = generate_ai_image(image_prompt)
+
+                # For testing, always use the test image
+                # image_path = generate_ai_image(image_prompt)
+                image_path = "/static/images/generated/test_image.png"
+                logger.info(f"Using test image: {image_path}")
 
                 # Add image data to response if successful
                 if image_path:
                     response_data["image_url"] = image_path
                     response_data["image_prompt"] = image_prompt
-                    logger.info(f"Image generated successfully: {image_path}")
+                    logger.info(f"Image path added to response: {image_path}")
                 else:
                     logger.warning("Image generation returned None")
             except Exception as img_error:
@@ -602,13 +606,17 @@ async def get_social_content(
 
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
-                image_path = generate_ai_image(image_prompt)
+
+                # For testing, always use the test image
+                # image_path = generate_ai_image(image_prompt)
+                image_path = "/static/images/generated/test_image.png"
+                logger.info(f"Using test image: {image_path}")
 
                 # Add image data to response if successful
                 if image_path:
                     response_data["image_url"] = image_path
                     response_data["image_prompt"] = image_prompt
-                    logger.info(f"Image generated successfully: {image_path}")
+                    logger.info(f"Image path added to response: {image_path}")
                 else:
                     logger.warning("Image generation returned None")
             except Exception as img_error:
