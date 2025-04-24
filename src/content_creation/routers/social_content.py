@@ -337,8 +337,24 @@ def generate_ai_image(prompt: str) -> str:
             logger.warning("Using placeholder image generation since no Stability API key is provided")
             return create_placeholder_image(prompt)
 
-        # Prepare the API request
-        url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+        # Clean up the prompt to ensure it's properly formatted
+        # Remove any extra quotes that might be in the prompt
+        clean_prompt = prompt.replace('"', '').replace("'", "")
+
+        # Enhanced prompt for better product images
+        enhanced_prompt = f"Professional product photo of {clean_prompt}, white background, studio lighting, high quality, detailed product photography"
+        logger.info(f"Using enhanced prompt: {enhanced_prompt}")
+
+        # Prepare the API request - try the recommended endpoint first
+        # If this endpoint doesn't work, we'll fall back to a more standard one
+        try_endpoints = [
+            "https://api.stability.ai/v1/generation/stable-diffusion-xl-beta-v2-2-2/text-to-image",
+            "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+            "https://api.stability.ai/v1/generation/stable-diffusion-v1-5/text-to-image"
+        ]
+
+        # Start with the first endpoint
+        url = try_endpoints[0]
 
         headers = {
             "Authorization": f"Bearer {STABILITY_API_KEY}",
@@ -349,32 +365,77 @@ def generate_ai_image(prompt: str) -> str:
         body = {
             "text_prompts": [
                 {
-                    "text": prompt,
+                    "text": enhanced_prompt,
                     "weight": 1.0
+                },
+                {
+                    "text": "blurry, low quality, distorted, deformed, disfigured, bad anatomy, watermark, text, logo",
+                    "weight": -0.7
                 }
             ],
-            "cfg_scale": 7,
-            "height": 1024,
-            "width": 1024,
+            "cfg_scale": 10,  # Increased for more prompt adherence
+            "height": 768,    # Standard size for product images
+            "width": 768,     # Square format works well for most platforms
             "samples": 1,
-            "steps": 30
+            "steps": 30,
+            "style_preset": "product"
         }
 
         # Make the API request
-        logger.info(f"Sending image generation request to Stability AI with prompt: {prompt}")
+        logger.info(f"Sending image generation request to Stability AI")
+        logger.info(f"API URL: {url}")
+        logger.info(f"Request body: {body}")
+
         response = requests.post(url, headers=headers, json=body)
+
+        # Log the response status and headers for debugging
+        logger.info(f"Response status code: {response.status_code}")
+        logger.info(f"Response headers: {response.headers}")
 
         if response.status_code != 200:
             logger.error(f"Error generating image: {response.status_code} - {response.text}")
             # Fall back to placeholder image
             return create_placeholder_image(prompt)
 
-        data = response.json()
+        # Try to parse the response as JSON
+        try:
+            data = response.json()
+            logger.info(f"Response data keys: {data.keys()}")
 
-        # Save the image
-        if "artifacts" in data and len(data["artifacts"]) > 0:
-            artifact = data["artifacts"][0]
-            image_data = base64.b64decode(artifact["base64"])
+            # Save the image
+            if "artifacts" in data and len(data["artifacts"]) > 0:
+                artifact = data["artifacts"][0]
+
+                if "base64" in artifact:
+                    # Decode the base64 image data
+                    image_data = base64.b64decode(artifact["base64"])
+
+                    # Generate a unique filename
+                    import time
+                    import hashlib
+                    timestamp = int(time.time())
+                    filename = f"image_{timestamp}_{hashlib.md5(prompt.encode()).hexdigest()[:8]}.png"
+                    image_path = STATIC_DIR / filename
+
+                    # Save the image
+                    with open(image_path, "wb") as f:
+                        f.write(image_data)
+
+                    logger.info(f"Successfully saved image to {image_path}")
+
+                    # Return the relative path to the image
+                    return f"/static/images/generated/{filename}"
+                else:
+                    logger.error(f"No base64 data in artifact: {artifact.keys()}")
+            else:
+                logger.error(f"No artifacts in response data: {data}")
+
+            # If we get here, something went wrong with the response format
+            return create_placeholder_image(prompt)
+
+        except ValueError as json_error:
+            # If the response is not JSON, it might be the image data directly
+            logger.warning(f"Response is not JSON, might be direct image data: {json_error}")
 
             # Generate a unique filename
             import time
@@ -383,18 +444,18 @@ def generate_ai_image(prompt: str) -> str:
             filename = f"image_{timestamp}_{hashlib.md5(prompt.encode()).hexdigest()[:8]}.png"
             image_path = STATIC_DIR / filename
 
-            # Save the image
+            # Save the image data directly
             with open(image_path, "wb") as f:
-                f.write(image_data)
+                f.write(response.content)
+
+            logger.info(f"Saved direct image data to {image_path}")
 
             # Return the relative path to the image
             return f"/static/images/generated/{filename}"
-        else:
-            logger.error("No image data in response")
-            return create_placeholder_image(prompt)
 
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}")
+        logger.exception("Full exception details:")
         return create_placeholder_image(prompt)
 
 def create_placeholder_image(prompt: str) -> str:
@@ -523,10 +584,9 @@ async def create_social_content(request: SocialContentRequest):
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
 
-                # For testing, always use the test image
-                # image_path = generate_ai_image(image_prompt)
-                image_path = "/static/images/generated/test_image.png"
-                logger.info(f"Using test image: {image_path}")
+                # Use the Stability AI API for image generation
+                image_path = generate_ai_image(image_prompt)
+                logger.info(f"Generated image path: {image_path}")
 
                 # Add image data to response if successful
                 if image_path:
@@ -607,10 +667,9 @@ async def get_social_content(
                 # Generate the image
                 logger.info(f"Generating image with prompt: {image_prompt}")
 
-                # For testing, always use the test image
-                # image_path = generate_ai_image(image_prompt)
-                image_path = "/static/images/generated/test_image.png"
-                logger.info(f"Using test image: {image_path}")
+                # Use the Stability AI API for image generation
+                image_path = generate_ai_image(image_prompt)
+                logger.info(f"Generated image path: {image_path}")
 
                 # Add image data to response if successful
                 if image_path:
