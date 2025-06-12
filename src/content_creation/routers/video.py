@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 import logging
 from typing import Optional
@@ -9,35 +9,63 @@ from ..utils.exceptions import GeminiAPIError, ValidationError
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini model once
+# Initialize Gemini configuration
 try:
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-pro")
-    logger.info("Gemini model initialized successfully")
+    logger.info("Gemini API configured successfully")
 except Exception as e:
-    logger.error(f"Failed to initialize Gemini model: {str(e)}")
-    model = None
+    logger.error(f"Failed to configure Gemini API: {str(e)}")
+    raise
 
 class VideoConceptRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
-    duration: int = Field(default=30, ge=10, le=300)
+    duration: int = Field(
+        default=30,
+        ge=settings.MIN_VIDEO_DURATION,
+        le=settings.MAX_VIDEO_DURATION
+    )
     purpose: Optional[str] = Field(default="Product Demo Ad")
     target_audience: Optional[str] = Field(default="General audience")
 
+def create_video_prompt(title: str, duration: int, purpose: str, target_audience: str) -> str:
+    """Create a detailed prompt for video generation."""
+    return f'''Create a professional {duration}-second video script for: "{title}"
+
+Purpose: {purpose}
+Target Audience: {target_audience}
+
+Please provide a detailed breakdown including:
+1. Scene-by-scene description with exact timestamps
+2. Visual descriptions (camera angles, movements, composition)
+3. Voice-over script with tone and pacing
+4. On-screen text and graphics
+5. Music and sound design suggestions
+6. Transitions between scenes
+
+Format each scene as:
+Scene [number] ([start time] - [end time])
+- Visuals: [detailed visual description]
+- Audio: [voice-over script and sound design]
+- Text: [on-screen text content]
+- Transition: [transition type]
+
+Make the script engaging and professional, focusing on high production value.'''
+
 def generate_video_script(prompt: str) -> str:
-    """Generate video script using Gemini API"""
-    if not model:
-        raise GeminiAPIError("Gemini model not initialized")
-        
+    """Generate video script using Gemini API."""
     try:
+        # Configure generation settings
         generation_config = {
             "temperature": 0.7,
-            "top_p": 1,
-            "top_k": 32,
+            "top_p": 0.8,
+            "top_k": 40,
             "max_output_tokens": 2048,
         }
+
+        # Initialize model
+        model = genai.GenerativeModel("gemini-pro")
         
-        logger.info("Generating video script...")
+        # Generate content
         response = model.generate_content(
             prompt,
             generation_config=generation_config
@@ -45,53 +73,50 @@ def generate_video_script(prompt: str) -> str:
         
         if not response or not hasattr(response, 'text'):
             raise GeminiAPIError("Invalid response from Gemini API")
-            
+        
         text = response.text.strip()
         if not text:
             raise GeminiAPIError("Empty response from Gemini API")
             
-        logger.info(f"Generated script of length: {len(text)}")
         return text
         
     except Exception as e:
-        logger.error(f"Error generating script: {str(e)}")
-        raise GeminiAPIError(f"Failed to generate script: {str(e)}")
+        logger.error(f"Error generating video script: {str(e)}", exc_info=True)
+        raise GeminiAPIError(f"Failed to generate video script: {str(e)}")
 
 @router.get("/videos")
 async def get_videos(video_title: str, duration: int):
-    """Handle GET requests for video generation"""
+    """Handle GET requests for video generation."""
     try:
-        # Basic validation
-        if not video_title or not duration:
-            raise ValidationError("Missing required parameters")
-            
-        # Clean title
+        # Clean and validate title
         title = video_title.strip()
-        if len(title) < 3:
-            raise ValidationError("Title must be at least 3 characters long")
+        if not title:
+            raise ValidationError("Video title cannot be empty")
             
+        # Remove any metadata from the title
+        if "Video Title:" in title:
+            title = title.split("Video Title:")[1].strip()
+        if "Duration:" in title:
+            title = title.split("Duration:")[0].strip()
+        
+        # Validate duration
+        if duration < settings.MIN_VIDEO_DURATION or duration > settings.MAX_VIDEO_DURATION:
+            raise ValidationError(
+                f"Duration must be between {settings.MIN_VIDEO_DURATION} and {settings.MAX_VIDEO_DURATION} seconds"
+            )
+        
         # Create prompt
-        prompt = f'''As a professional video producer, create a detailed {duration}-second video script for: "{title}"
-
-Required sections:
-1. Scene-by-scene breakdown with exact timestamps
-2. Visual descriptions with camera angles and movements
-3. Voice-over script
-4. On-screen text
-5. Transitions between scenes
-
-Format for each scene:
-Scene [X] ([start time] - [end time])
-- Visuals: [detailed visual description]
-- Audio: [voice-over script and sound design]
-- Text: [on-screen text elements]
-- Transition: [transition to next scene]
-
-Make it engaging and professional, suitable for a high-end product video.'''
+        prompt = create_video_prompt(
+            title=title,
+            duration=duration,
+            purpose="Product Demo Ad",
+            target_audience="General audience"
+        )
         
         # Generate script
         detailed_script = generate_video_script(prompt)
         
+        # Return response
         return {
             "video_title": title,
             "duration": f"{duration} seconds",
