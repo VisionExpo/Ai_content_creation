@@ -4,14 +4,19 @@ import logging
 from typing import Optional
 import google.generativeai as genai
 from ..config.settings import settings
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from ..utils.exceptions import GeminiAPIError, ValidationError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini API with just the API key
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Initialize Gemini model once
+try:
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-pro")
+    logger.info("Gemini model initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Gemini model: {str(e)}")
+    model = None
 
 class VideoConceptRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
@@ -19,77 +24,90 @@ class VideoConceptRequest(BaseModel):
     purpose: Optional[str] = Field(default="Product Demo Ad")
     target_audience: Optional[str] = Field(default="General audience")
 
-def generate_content_sync(prompt: str) -> str:
-    """Synchronous function to generate content using Gemini API."""
+def generate_video_script(prompt: str) -> str:
+    """Generate video script using Gemini API"""
+    if not model:
+        raise GeminiAPIError("Gemini model not initialized")
+        
     try:
-        model = genai.GenerativeModel("gemini-pro")
-        response = model.generate_content(prompt)
-        if response and hasattr(response, 'text'):
-            return response.text.strip()
-        raise Exception("No valid response from Gemini API")
+        generation_config = {
+            "temperature": 0.7,
+            "top_p": 1,
+            "top_k": 32,
+            "max_output_tokens": 2048,
+        }
+        
+        logger.info("Generating video script...")
+        response = model.generate_content(
+            prompt,
+            generation_config=generation_config
+        )
+        
+        if not response or not hasattr(response, 'text'):
+            raise GeminiAPIError("Invalid response from Gemini API")
+            
+        text = response.text.strip()
+        if not text:
+            raise GeminiAPIError("Empty response from Gemini API")
+            
+        logger.info(f"Generated script of length: {len(text)}")
+        return text
+        
     except Exception as e:
-        logger.error(f"Error generating content: {str(e)}")
-        raise
-
-async def generate_content_async(prompt: str) -> str:
-    """Asynchronous wrapper for generating content."""
-    with ThreadPoolExecutor() as executor:
-        try:
-            return await asyncio.get_event_loop().run_in_executor(
-                executor, generate_content_sync, prompt
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate content: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to generate video concept. Please try again."
-            )
+        logger.error(f"Error generating script: {str(e)}")
+        raise GeminiAPIError(f"Failed to generate script: {str(e)}")
 
 @router.get("/videos")
 async def get_videos(video_title: str, duration: int):
     """Handle GET requests for video generation"""
     try:
-        # Basic input validation
+        # Basic validation
         if not video_title or not duration:
-            raise HTTPException(status_code=400, detail="Missing required parameters")
+            raise ValidationError("Missing required parameters")
             
         # Clean title
         title = video_title.strip()
-        
+        if len(title) < 3:
+            raise ValidationError("Title must be at least 3 characters long")
+            
         # Create prompt
-        prompt = f'''
-Create a detailed {duration}-second video script for: {title}
+        prompt = f'''As a professional video producer, create a detailed {duration}-second video script for: "{title}"
 
-Please provide:
-1. Scene-by-scene breakdown with specific timestamps
-2. Visual descriptions including camera angles
+Required sections:
+1. Scene-by-scene breakdown with exact timestamps
+2. Visual descriptions with camera angles and movements
 3. Voice-over script
 4. On-screen text
 5. Transitions between scenes
 
-Format each scene as:
-Scene [number] ([timestamp])
-- Visual description
-- Voice-over
-- Text overlay
-- Transition
-'''
+Format for each scene:
+Scene [X] ([start time] - [end time])
+- Visuals: [detailed visual description]
+- Audio: [voice-over script and sound design]
+- Text: [on-screen text elements]
+- Transition: [transition to next scene]
+
+Make it engaging and professional, suitable for a high-end product video.'''
         
-        # Generate content asynchronously
-        result = await generate_content_async(prompt)
+        # Generate script
+        detailed_script = generate_video_script(prompt)
         
         return {
             "video_title": title,
             "duration": f"{duration} seconds",
             "purpose": "Product Demo Ad",
             "target_audience": "General audience",
-            "detailed_script": result
+            "detailed_script": detailed_script
         }
         
-    except HTTPException as he:
-        raise he
+    except ValidationError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except GeminiAPIError as ge:
+        logger.error(f"Gemini API error: {str(ge)}")
+        raise HTTPException(status_code=500, detail=str(ge))
     except Exception as e:
-        logger.error(f"Error in video generation: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Failed to generate video concept. Please try again."
