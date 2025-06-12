@@ -4,6 +4,8 @@ from typing import Optional
 class Settings(BaseSettings):
     # API Keys
     GEMINI_API_KEY: str
+    HUGGINGFACE_API_KEY: Optional[str] = None
+    STABILITY_API_KEY: Optional[str] = None
     
     # API Endpoints
     GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
@@ -19,5 +21,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"  # Allow extra fields in the environment
 
 settings = Settings()
