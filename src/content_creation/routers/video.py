@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, HTTPException
 from pydantic import BaseModel, Field
 import httpx
 import logging
@@ -88,3 +88,22 @@ async def generate_video_concept(
     )
 
     return response
+
+@router.get("/videos")
+async def get_videos(video_title: str, duration: int):
+    """Handle GET requests for video generation"""
+    try:
+        result = await generate_video_concept(
+            request=Request,  # Create a dummy request object
+            video_request=VideoConceptRequest(
+                title=video_title,
+                duration=duration
+            )
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error generating video: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate video concept. Please try again."
+        )
