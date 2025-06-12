@@ -5,9 +5,8 @@ class Settings(BaseSettings):
     # API Keys
     GEMINI_API_KEY: str
     HUGGINGFACE_API_KEY: Optional[str] = None
-    STABILITY_API_KEY: Optional[str] = None
-      # API Endpoints
-    GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
+    STABILITY_API_KEY: Optional[str] = None    # API Endpoints
+    GEMINI_API_URL: str = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
     
     # Server Configuration
     API_V1_PREFIX: str = "/api"
