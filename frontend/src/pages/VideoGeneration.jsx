@@ -24,11 +24,24 @@ const VideoGeneration = () => {
     setIsLoading(true)
     setError('')
     
+    // Client-side validation
+    if (formData.video_title.length > 100) {
+      setError('Video title must be 100 characters or less')
+      setIsLoading(false)
+      return
+    }
+    
+    if (formData.duration < 10 || formData.duration > 300) {
+      setError('Duration must be between 10 and 300 seconds')
+      setIsLoading(false)
+      return
+    }
+    
     try {
       const response = await generateVideo(formData)
       setResult(response)
     } catch (err) {
-      setError('Failed to generate video. Please try again.')
+      setError(err.response?.data?.detail || 'Failed to generate video. Please try again.')
       console.error(err)
     } finally {
       setIsLoading(false)

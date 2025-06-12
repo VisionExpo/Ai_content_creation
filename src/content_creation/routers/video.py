@@ -93,14 +93,27 @@ async def generate_video_concept(
 async def get_videos(video_title: str, duration: int):
     """Handle GET requests for video generation"""
     try:
+        # Trim the title to first 100 characters if it's too long
+        trimmed_title = video_title[:100] if len(video_title) > 100 else video_title
+        
+        # If title was trimmed, log a warning
+        if trimmed_title != video_title:
+            logger.warning(f"Title was trimmed from {len(video_title)} to 100 characters")
+        
         result = await generate_video_concept(
             request=Request,  # Create a dummy request object
             video_request=VideoConceptRequest(
-                title=video_title,
+                title=trimmed_title,
                 duration=duration
             )
         )
         return result
+    except ValidationError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid input: {str(ve)}"
+        )
     except Exception as e:
         logger.error(f"Error generating video: {str(e)}")
         raise HTTPException(
