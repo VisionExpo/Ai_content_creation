@@ -9,20 +9,35 @@ from ..utils.exceptions import GeminiAPIError, ValidationError, ConfigurationErr
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini configuration
-genai.configure(
-    api_key=settings.GEMINI_API_KEY,
-    transport="rest"  # Explicitly use REST transport for better compatibility
-)
+# Initialize Gemini configuration with default model settings
+genai.configure(api_key=settings.GEMINI_API_KEY)
 
-# Verify API initialization
-try:
-    models = genai.list_models()
-    if not any(model.name == "gemini-pro" for model in models):
-        raise ConfigurationError("gemini-pro model not available in the current API version")
-except Exception as e:
-    logger.error(f"Failed to initialize Gemini API: {str(e)}")
-    raise ConfigurationError(f"Failed to initialize Gemini API: {str(e)}")
+# Define generation config
+generation_config = {
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "top_k": 40,
+    "max_output_tokens": 1000,
+}
+
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    }
+]
 
 class VideoConceptRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
@@ -33,40 +48,15 @@ class VideoConceptRequest(BaseModel):
 async def call_gemini_api(prompt: str) -> str:
     """Call the Gemini API to generate video concept."""
     try:
-        # Configure the model
-        generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.8,
-            "top_k": 40,
-            "max_output_tokens": 1000,
-        }
-
-        safety_settings = [
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            }
-        ]
-
-        model = genai.GenerativeModel(
-            model_name="gemini-pro",
+        # Initialize the model for this request
+        model = genai.GenerativeModel("gemini-pro")
+        
+        # Generate content
+        response = model.generate_content(
+            prompt,
             generation_config=generation_config,
             safety_settings=safety_settings
         )
-        
-        response = model.generate_content(prompt)
         
         if hasattr(response, 'text') and response.text:
             return response.text.strip()

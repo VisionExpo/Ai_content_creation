@@ -12,6 +12,10 @@ def verify_environment() -> List[str]:
     # Check required API keys
     if not settings.GEMINI_API_KEY:
         errors.append("GEMINI_API_KEY is not set in environment")
+    else:
+        # Test Gemini API key format only
+        if len(settings.GEMINI_API_KEY) < 10:
+            errors.append("GEMINI_API_KEY appears to be invalid (too short)")
     
     # Check directories exist
     required_dirs = [
