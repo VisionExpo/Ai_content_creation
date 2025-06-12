@@ -71,24 +71,51 @@ async def call_gemini_api(prompt: str) -> str:
 async def get_videos(video_title: str, duration: int):
     """Handle GET requests for video generation"""
     try:
+        logger.info(f"Received video generation request with title: {video_title}, duration: {duration}")
+        
+        # Clean and validate title
+        title = video_title.strip()
+        if "Video Title:" in title:
+            title = title.split("Video Title:")[1].strip()
+        if "Duration:" in title:
+            title = title.split("Duration:")[0].strip()
+            
         # Trim the title to first 100 characters if it's too long
-        trimmed_title = video_title[:100] if len(video_title) > 100 else video_title
+        trimmed_title = title[:100] if len(title) > 100 else title
         
         # If title was trimmed, log a warning
-        if trimmed_title != video_title:
-            logger.warning(f"Title was trimmed from {len(video_title)} to 100 characters")
+        if trimmed_title != title:
+            logger.warning(f"Title was trimmed from {len(title)} to 100 characters")
         
-        # Create a dummy request for the generate_video_concept function
-        dummy_request = Request(scope={"type": "http"})
-        
-        result = await generate_video_concept(
-            request=dummy_request,
-            video_request=VideoConceptRequest(
-                title=trimmed_title,
-                duration=duration
-            )
+        # Create a video request object
+        video_request = VideoConceptRequest(
+            title=trimmed_title,
+            duration=duration,
+            purpose="Product Demo Ad",
+            target_audience="Runners, fitness enthusiasts, and young athletes"
         )
-        return result
+          # Generate the video concept
+        prompt = (
+            f"Generate a detailed video script outline (scene by scene) for a video titled '{video_request.title}' "
+            f"with duration {video_request.duration} seconds. "
+            f"The purpose is '{video_request.purpose}' and the target audience is '{video_request.target_audience}'. "
+            "Include scene number, time range, visuals, voiceover, and text on screen if applicable."
+        )
+
+        logger.info(f"Generating video concept with prompt: {prompt}")
+        
+        detailed_script = await call_gemini_api(prompt)
+        
+        response = {
+            "video_title": video_request.title,
+            "duration": f"{video_request.duration} seconds",
+            "purpose": video_request.purpose,
+            "target_audience": video_request.target_audience,
+            "detailed_script": detailed_script
+        }
+        
+        return response
+        
     except ValidationError as ve:
         logger.error(f"Validation error: {str(ve)}")
         raise HTTPException(
@@ -109,23 +136,34 @@ async def generate_video_concept(
 ):
     """Generate a video concept using the Gemini API."""
     request_id = request.headers.get("X-Request-ID", "unknown")
-    logger.info(
-        "Generating video concept",
-        extra={
-            "request_id": request_id,
-            "title": video_request.title,
-            "duration": video_request.duration
-        }
-    )
-
-    prompt = (
-        f"Generate a detailed video script outline (scene by scene) for a video titled '{video_request.title}' "
-        f"with duration {video_request.duration} seconds. "
-        f"The purpose is '{video_request.purpose}' and the target audience is '{video_request.target_audience}'. "
-        "Include scene number, time range, visuals, voiceover, and text on screen if applicable."
-    )
-
+    
     try:
+        # Clean and validate title
+        title = video_request.title.strip()
+        if "Video Title:" in title:
+            title = title.split("Video Title:")[1].strip()
+        if "Duration:" in title:
+            title = title.split("Duration:")[0].strip()
+            
+        # Update the video request with cleaned title
+        video_request.title = title
+        
+        logger.info(
+            "Generating video concept",
+            extra={
+                "request_id": request_id,
+                "title": video_request.title,
+                "duration": video_request.duration
+            }
+        )
+        
+        prompt = (
+            f"Generate a detailed video script outline (scene by scene) for a video titled '{video_request.title}' "
+            f"with duration {video_request.duration} seconds. "
+            f"The purpose is '{video_request.purpose}' and the target audience is '{video_request.target_audience}'. "
+            "Include scene number, time range, visuals, voiceover, and text on screen if applicable."
+        )
+
         detailed_script = await call_gemini_api(prompt)
 
         response = {
@@ -143,6 +181,18 @@ async def generate_video_concept(
 
         return response
         
+    except GeminiAPIError as e:
+        logger.error(f"Gemini API error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    except ValidationError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid input: {str(ve)}"
+        )
     except Exception as e:
         logger.error(f"Error generating video concept: {str(e)}")
         raise HTTPException(

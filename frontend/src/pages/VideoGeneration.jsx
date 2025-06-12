@@ -24,21 +24,34 @@ const VideoGeneration = () => {
     setIsLoading(true)
     setError('')
     
-    // Client-side validation
-    if (formData.video_title.length > 100) {
-      setError('Video title must be 100 characters or less')
-      setIsLoading(false)
-      return
-    }
-    
-    if (formData.duration < 10 || formData.duration > 300) {
-      setError('Duration must be between 10 and 300 seconds')
-      setIsLoading(false)
-      return
-    }
-    
     try {
-      const response = await generateVideo(formData)
+      // Extract the actual title if it contains the prefix
+      let title = formData.video_title.trim();
+      
+      // Clean up title if it contains metadata
+      if (title.includes("Video Title:")) {
+        const titleMatch = title.match(/Video Title:\s*(.*?)(?:\s+Duration:|$)/);
+        title = titleMatch ? titleMatch[1].trim() : title;
+      }
+      
+      // Client-side validation
+      if (title.length > 100) {
+        setError('Video title must be 100 characters or less')
+        setIsLoading(false)
+        return
+      }
+      
+      if (formData.duration < 10 || formData.duration > 300) {
+        setError('Duration must be between 10 and 300 seconds')
+        setIsLoading(false)
+        return
+      }
+      
+      const response = await generateVideo({
+        ...formData,
+        video_title: title
+      })
+      
       setResult(response)
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to generate video. Please try again.')
@@ -155,11 +168,11 @@ const VideoGeneration = () => {
                   </span>
                 </div>
                 
-                <p className="whitespace-pre-line">{result.message}</p>
+                <p className="whitespace-pre-line">{result.detailed_script}</p>
                 
                 <div className="mt-6 flex justify-end">
                   <button
-                    onClick={() => navigator.clipboard.writeText(result.message)}
+                    onClick={() => navigator.clipboard.writeText(result.detailed_script)}
                     className="btn btn-secondary text-sm flex items-center"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
