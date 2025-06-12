@@ -13,12 +13,19 @@ from src.content_creation.utils.exceptions import APIError
 # Set up logging
 logger = setup_logging()
 
+# Verify environment
+from src.content_creation.utils.startup import verify_environment
+startup_errors = verify_environment()
+if startup_errors:
+    for error in startup_errors:
+        logger.error(f"Startup Error: {error}")
+    raise SystemExit(1)
+
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     docs_url="/api/docs",
-    openapi_url="/api/openapi.json"
-)
+    openapi_url="/api/openapi.json")
 
 # Add middleware
 app.add_middleware(
