@@ -10,7 +10,19 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Initialize Gemini configuration
-genai.configure(api_key=settings.GEMINI_API_KEY)
+genai.configure(
+    api_key=settings.GEMINI_API_KEY,
+    transport="rest"  # Explicitly use REST transport for better compatibility
+)
+
+# Verify API initialization
+try:
+    models = genai.list_models()
+    if not any(model.name == "gemini-pro" for model in models):
+        raise ConfigurationError("gemini-pro model not available in the current API version")
+except Exception as e:
+    logger.error(f"Failed to initialize Gemini API: {str(e)}")
+    raise ConfigurationError(f"Failed to initialize Gemini API: {str(e)}")
 
 class VideoConceptRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
